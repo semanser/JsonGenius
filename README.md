@@ -1,6 +1,6 @@
 # JsonGenius
 
-JsonGenius is a self-hosted scraping API that extracts structured data described by a JSON Schema. Provide any URL and a desired JSON Schema, and JsonGenius will return the structured data from the website.
+JsonGenius is a self-hosted scraping API that extracts structured data described by a [JSON Schema](https://json-schema.org). Provide any URL and a desired JSON Schema, and JsonGenius will return the structured data from the website.
 
 ## Demo
 ![image](.github/screenshots/demo.png)
