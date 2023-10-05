@@ -1,19 +1,31 @@
 # JsonGenius
 
-## Description
-JsonGenius allows you to extract data from any website using JSON Schema. It is a simple API that takes a JSON Schema and a URL and returns the data from the website in JSON format.
+JsonGenius is a self-hosted scraping API that extracts structured data described by a JSON Schema. Provide any URL and a desired JSON Schema, and JsonGenius will return the structured data from the website.
 
-## Running
+## Demo
+![image](.github/screenshots/demo.png)
+
+## Prerequisites
+- [Docker Compose](https://docs.docker.com/compose/install/)
+- `OPEN_AI_KEY` - An API key for [OpenAI](https://openai.com/). You can get one for free [here](https://platform.openai.com/account/api-keys).
+
+## Running (self-hosted)
 ```bash
 git clone https://github.com/semanser/jsongenius
 cd jsongenius
+export OPEN_AI_KEY=<your key here>
 docker compose up
 ```
-The API will be available at http://localhost:3001.
+The API will be available at http://localhost:3001. You can change the port by editing the `docker-compose.yml` file.
 
+## Usage
 
-## Example
-#### Request
+### POST /lookup
+This endpoint accepts a JSON body with the following fields:
+- `url`: The URL of the website to scrape
+- `schema`: The JSON Schema to use to extract data from the website. The schema must be a valid JSON Schema object. Read more about JSON Schema [here](https://json-schema.org/).
+
+#### Example
 ```bash
 curl -X POST -H "Content-Type: application/json" -d '{
   "url": "https://www.amazon.com/s?k=gaming+headsets",
@@ -41,32 +53,6 @@ curl -X POST -H "Content-Type: application/json" -d '{
 }' http://localhost:3001/lookup
 ```
 
-#### Response
-```json
-{
-  "result": {
-    "products": [
-      {
-        "name": "Razer Nari Ultimate Wireless 7.1 Surround Sound Gaming Headset: THX Audio & Haptic Feedback - Auto-Adjust Headband - Chroma RGB - Retractable Mic - For PC, PS4, PS5 - Black",
-        "price": 99.52
-      },
-      {
-        "name": "Razer BlackShark V2 Pro Wireless Gaming Headset 2023 Edition: Detachable Mic - Pro-Tuned FPS Profiles - 50mm Drivers - Noise-Isolating Earcups w/Ultra-Soft Memory Foam - 70 Hr Battery Life - Black",
-        "price": 199
-      },
-      {
-        "name": "BENGOO G9000 Stereo Gaming Headset for PS4 PC Xbox One PS5 Controller, Noise Cancelling Over Ear Headphones with Mic, LED Light, Bass Surround, Soft Memory Earmuffs for Laptop Mac Nintendo NES Games",
-        "price":21.99
-      },
-      {
-        "name": "SteelSeries Arctis Nova 1P Multi-System Gaming Headset — Hi-Fi Drivers — 360° Spatial Audio — Comfort Design — Durable — Lightweight — Noise-Cancelling Mic — PS5/PS4, PC, Xbox, Switch - White",
-        "price":49.99
-      },
-      {
-        "name": "HyperX Cloud II Gaming Headset - 7.1 Surround Sound - Memory Foam Ear Pads - Durable Aluminum Frame - Works with PC, PS4, PS4 PRO, Xbox One, Xbox One S - Gun Metal (KHX-HSCP-GM)",
-        "price":77
-      }
-    ]
-  }
-}
-```
+### FAQ
+- **Does it work with JS heavy websites?** Yes! JsonGenius uses Chromium to render the page, so it can handle any website that a normal browser can.
+- **Can I bring my own Chromium instance?** Yes! You can set the `WS_URL` environment variable that points to a [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) endpoint. JsonGenius will use that instead of spinning up its own Chromium instance.
