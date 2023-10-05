@@ -1,0 +1,27 @@
+# Ignore common editor and OS files
+.git
+.vscode
+*.swp
+.DS_Store
+
+# Ignore development and build files
+node_modules
+*.log
+*.tmp
+*.bak
+
+# Ignore version control system files
+.svn
+.gitignore
+
+# Ignore temporary and cache files
+*.tmp
+*.bak
+*.cache
+
+# Ignore test and documentation files
+tests
+docs
+
+# Ignore .env files
+.env

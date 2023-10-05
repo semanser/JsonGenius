@@ -21,9 +21,19 @@ type Request struct {
 
 func main() {
 	OPEN_AI_KEY := os.Getenv("OPEN_AI_KEY")
+	wsURL := os.Getenv("WS_URL")
+
+	if OPEN_AI_KEY == "" {
+		log.Fatal("OPEN_AI_KEY is not set")
+	}
+
+	if wsURL == "" {
+		log.Fatal("WS_URL is not set")
+	}
+
 	openAIclient := openai.NewClient(OPEN_AI_KEY)
 
-	allocatorCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), "ws://localhost:3000")
+	allocatorCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), wsURL)
 	defer cancel()
 
 	chromeCtx, cancel := chromedp.NewContext(allocatorCtx)
@@ -31,7 +41,7 @@ func main() {
 
 	r := gin.Default()
 
-	r.POST("/test", func(c *gin.Context) {
+	r.POST("/lookup", func(c *gin.Context) {
 		var requestBody Request
 
 		if err := c.BindJSON(&requestBody); err != nil {
@@ -113,5 +123,5 @@ func main() {
 		})
 	})
 
-	r.Run(":8081")
+	r.Run(":8080")
 }
