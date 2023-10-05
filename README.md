@@ -7,9 +7,10 @@ JsonGenius is a self-hosted scraping API that extracts structured data described
 
 ## Prerequisites
 - [Docker Compose](https://docs.docker.com/compose/install/)
-- `OPEN_AI_KEY` - An API key for [OpenAI](https://openai.com/). You can get one for free [here](https://platform.openai.com/account/api-keys).
+- `OPEN_AI_KEY` - An API key for [OpenAI](https://openai.com/). You can get one for free [here](https://platform.openai.com/account/api-keys). This should be set as an environment variable.
 
-## Running (self-hosted)
+## Usage
+####  Docker Compose (recommended)
 ```bash
 git clone https://github.com/semanser/jsongenius
 cd jsongenius
@@ -18,7 +19,16 @@ docker compose up
 ```
 The API will be available at http://localhost:3001. You can change the port by editing the `docker-compose.yml` file.
 
-## Usage
+#### Compile from source
+```bash
+git clone https://github.com/semanser/jsongenius
+cd jsongenius
+export OPEN_AI_KEY=<your key here>
+go build .
+./jsongenius
+```
+
+## API
 
 ### POST /lookup
 This endpoint accepts a JSON body with the following fields:
