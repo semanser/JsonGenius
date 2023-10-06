@@ -2,15 +2,14 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"text/template"
 
-	"github.com/chromedp/chromedp"
 	"github.com/gin-gonic/gin"
+	"github.com/go-rod/rod"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -31,15 +30,14 @@ func main() {
 		log.Fatal("WS_URL is not set")
 	}
 
+	log.Println("Starting server...")
+	log.Println("WS_URL: ", wsURL)
+
 	openAIclient := openai.NewClient(OPEN_AI_KEY)
 
-	allocatorCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), wsURL)
-	defer cancel()
-
-	chromeCtx, cancel := chromedp.NewContext(allocatorCtx)
-	defer cancel()
-
 	r := gin.Default()
+
+	browser := rod.New().ControlURL(wsURL).MustConnect()
 
 	r.POST("/lookup", func(c *gin.Context) {
 		var requestBody Request
@@ -48,22 +46,23 @@ func main() {
 			log.Fatal(err)
 		}
 
-		var pageText string
-		err := chromedp.Run(chromeCtx,
-			chromedp.Navigate(requestBody.Url),
-			chromedp.Evaluate(`
-    function textNodesUnder(el){
-      var n, a=[], walk=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false);
-      while(n=walk.nextNode()) a.push(n);
-      return a;
-    }
-    textNodesUnder(document).filter(element => element.parentElement.tagName !== 'SCRIPT' && element.parentElement.tagName !== 'STYLE').map(v => v.nodeValue).map(s => s.trim()).join(' ')
-    `, &pageText),
-		)
+		log.Println("Request URL: ", requestBody.Url)
 
-		if err != nil {
-			log.Fatal(err)
-		}
+		var pageText string
+		page := browser.MustPage(requestBody.Url)
+		page.MustWaitLoad()
+		page.MustWaitRequestIdle()
+		page.MustWaitDOMStable()
+		page.MustWaitStable()
+		pageText = page.MustEval(`() => {
+      function textNodesUnder(el){
+        var n, a=[], walk=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false);
+        while(n=walk.nextNode()) a.push(n);
+        return a;
+      }
+
+      return textNodesUnder(document).filter(element => element.parentElement.tagName !== 'SCRIPT' && element.parentElement.tagName !== 'STYLE').map(v => v.nodeValue).map(s => s.trim()).join(' ')
+    }`).Str()
 
 		prompt := `
   I have text data that was extracted from a webpage. The text data is as follows:
@@ -81,7 +80,7 @@ func main() {
 		}
 
 		buf := &bytes.Buffer{}
-		err = t.Execute(buf, data)
+		err := t.Execute(buf, data)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -103,7 +102,7 @@ func main() {
 			},
 		}
 
-		resp, err := openAIclient.CreateChatCompletion(chromeCtx, req)
+		resp, err := openAIclient.CreateChatCompletion(c, req)
 		if err != nil {
 			log.Printf("Completion error: %v\n", err)
 			return

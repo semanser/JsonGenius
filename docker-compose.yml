@@ -1,16 +1,17 @@
 version: '3'
 
 services:
+  rod:
+    image: ghcr.io/go-rod/rod
+
   jsongenius:
-    image: semanser/jsongenius
+    image: semanser/jsongenius:0.1.1
+    restart: on-failure
     ports:
       - "3001:8080"
     environment:
-      - WS_URL=ws://browserless:3000
+      - WS_URL=ws://rod:7317
       - GIN_MODE=release
       - OPEN_AI_KEY
-
-  browserless:
-    image: browserless/chrome
-    ports:
-      - "3000:3000"
+    depends_on:
+      - rod
