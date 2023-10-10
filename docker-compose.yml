@@ -5,7 +5,7 @@ services:
     image: ghcr.io/go-rod/rod
 
   jsongenius:
-    image: semanser/jsongenius:0.1.1
+    image: semanser/jsongenius:latest
     restart: on-failure
     ports:
       - "3001:8080"
