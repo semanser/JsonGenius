@@ -61,7 +61,7 @@ func main() {
         return a;
       }
 
-      return textNodesUnder(document).filter(element => element.parentElement.tagName !== 'SCRIPT' && element.parentElement.tagName !== 'STYLE').map(v => v.nodeValue).map(s => s.trim()).join(' ')
+      return textNodesUnder(document.body).filter(element => element.parentElement.tagName !== 'SCRIPT' && element.parentElement.tagName !== 'STYLE').map(v => v.nodeValue).map(s => s.trim()).join(' ')
     }`).Str()
 
 		prompt := `
