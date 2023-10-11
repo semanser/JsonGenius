@@ -57,7 +57,9 @@ func main() {
 
 	r := gin.Default()
 
+  log.Println("Connecting to browser...")
 	browser := rod.New().ControlURL(wsURL).MustConnect()
+  log.Println("Connected to browser")
 	defer browser.MustClose()
 
 	r.POST("/lookup", func(c *gin.Context) {
