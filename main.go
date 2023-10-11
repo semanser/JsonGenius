@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/proto"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -17,6 +18,25 @@ type Request struct {
 	Url    string                     `json:"url"`
 	Schema map[string]json.RawMessage `json:"schema"`
 }
+
+const extractionScript = `() => {
+  function textNodesUnder(el){
+    var n, a=[], walk=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false);
+    while(n=walk.nextNode()) a.push(n);
+    return a;
+  }
+
+  return textNodesUnder(document.body)
+    .filter(
+       element => element.parentElement.tagName !== 'SCRIPT' &&
+       element.parentElement.tagName !== 'STYLE' &&
+       element.parentElement.tagName !== 'NOSCRIPT'
+     )
+    .map(v => v.nodeValue)
+    .map(v => v.trim())
+    .filter(v => v.length > 0)
+    .join(' ')
+}`
 
 func main() {
 	OPEN_AI_KEY := os.Getenv("OPEN_AI_KEY")
@@ -38,6 +58,7 @@ func main() {
 	r := gin.Default()
 
 	browser := rod.New().ControlURL(wsURL).MustConnect()
+	defer browser.MustClose()
 
 	r.POST("/lookup", func(c *gin.Context) {
 		var requestBody Request
@@ -50,28 +71,38 @@ func main() {
 
 		var pageText string
 		page := browser.MustPage(requestBody.Url)
-		page.MustWaitLoad()
-		page.MustWaitRequestIdle()
-		page.MustWaitDOMStable()
-		page.MustWaitStable()
-		pageText = page.MustEval(`() => {
-      function textNodesUnder(el){
-        var n, a=[], walk=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null,false);
-        while(n=walk.nextNode()) a.push(n);
-        return a;
-      }
 
-      return textNodesUnder(document.body).filter(element => element.parentElement.tagName !== 'SCRIPT' && element.parentElement.tagName !== 'STYLE').map(v => v.nodeValue).map(s => s.trim()).join(' ')
-    }`).Str()
+		pageRouter := page.HijackRequests()
+
+		// Do not load any images or css files
+		pageRouter.MustAdd("*", func(ctx *rod.Hijack) {
+			// There're a lot of types you can use in this enum, like NetworkResourceTypeScript for javascript files
+			// In this case we're using NetworkResourceTypeImage to block images
+			if ctx.Request.Type() == proto.NetworkResourceTypeImage ||
+				ctx.Request.Type() == proto.NetworkResourceTypeStylesheet ||
+				ctx.Request.Type() == proto.NetworkResourceTypeFont ||
+				ctx.Request.Type() == proto.NetworkResourceTypeMedia ||
+				ctx.Request.Type() == proto.NetworkResourceTypeManifest ||
+				ctx.Request.Type() == proto.NetworkResourceTypeOther {
+				ctx.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
+				return
+			}
+			ctx.ContinueRequest(&proto.FetchContinueRequest{})
+		})
+		// since we are only hijacking a specific page, even using the "*" won't affect much of the performance
+		go pageRouter.Run()
+
+		page.MustWaitDOMStable()
+		pageText = page.MustEval(extractionScript).Str()
 
 		prompt := `
-  I have text data that was extracted from a webpage. The text data is as follows:
-
-  {{.PageText}}
-
-  I need to extract information from this data. I will provide JSON schema for the data. Return me the data in JSON format.
-  `
-
+		  I have text data that was extracted from a webpage. The text data is as follows:
+		
+		  {{.PageText}}
+		
+		  I need to extract information from this data. I will provide JSON schema for the data. Return me the data in JSON format.
+		  `
+		
 		t := template.Must(template.New("prompt").Parse(prompt))
 		data := struct {
 			PageText string
